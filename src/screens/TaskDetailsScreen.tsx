@@ -24,9 +24,14 @@ const TaskDetailsScreen = ({navigation, route}: Props) => {
     return null;
   }
 
-  const handleMarkCompleted = () => {
-    toggleTaskCompleted(task.id);
-    Alert.alert('Task updated', 'Marked as completed locally.');
+  const handleMarkCompleted = async () => {
+    const updatedTask = await toggleTaskCompleted(task.id);
+    if (updatedTask) {
+      Alert.alert('Task updated', 'Marked as completed.');
+      return;
+    }
+
+    Alert.alert('Unable to update task', 'Please try again.');
   };
 
   const handleDelete = () => {
@@ -38,9 +43,14 @@ const TaskDetailsScreen = ({navigation, route}: Props) => {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => {
-          deleteTask(task.id);
-          navigation.navigate('Home');
+        onPress: async () => {
+          const deleted = await deleteTask(task.id);
+          if (deleted) {
+            navigation.navigate('Home');
+            return;
+          }
+
+          Alert.alert('Unable to delete task', 'Please try again.');
         },
       },
     ]);

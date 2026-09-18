@@ -9,9 +9,9 @@ import {
 
 const taskRouter = Router();
 
+taskRouter.post('/', createTask);
 taskRouter.get('/', getTasks);
 taskRouter.get('/:id', getTaskById);
-taskRouter.post('/', createTask);
 taskRouter.put('/:id', updateTask);
 taskRouter.delete('/:id', deleteTask);
 

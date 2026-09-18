@@ -1,71 +1,120 @@
-import React, {createContext, useContext, useState} from 'react';
-import type {Task} from '../types/task';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+import {
+  createTask,
+  deleteTask as deleteTaskRequest,
+  getApiErrorMessage,
+  getTasks,
+  updateTask,
+} from '../services/api';
+import type {Task, TaskInput} from '../types/task';
 
 type TaskContextValue = {
   tasks: Task[];
-  addTask: (task: Task) => void;
-  toggleTaskCompleted: (id: string) => void;
-  deleteTask: (id: string) => void;
+  loading: boolean;
+  error: string | null;
+  refreshTasks: () => Promise<void>;
+  addTask: (task: TaskInput) => Promise<Task | undefined>;
+  toggleTaskCompleted: (id: string) => Promise<Task | undefined>;
+  deleteTask: (id: string) => Promise<boolean>;
   getTaskById: (id: string) => Task | undefined;
 };
-
-const initialTasks: Task[] = [
-  {
-    id: '1',
-    title: 'Prepare project brief',
-    description: 'Draft the task app project scope and outline the first milestone.',
-    dateTime: 'Sep 18, 2026 at 10:00 AM',
-    deadline: 'Sep 19, 2026',
-    priority: 'High',
-    category: 'Work',
-    completed: false,
-  },
-  {
-    id: '2',
-    title: 'Review weekly notes',
-    description: 'Clean up planning notes and move useful items into tasks.',
-    dateTime: 'Sep 17, 2026 at 4:30 PM',
-    deadline: 'Sep 17, 2026',
-    priority: 'Medium',
-    category: 'Personal',
-    completed: true,
-  },
-  {
-    id: '3',
-    title: 'Schedule design pass',
-    description: 'Block focused time to refine the To-Do dashboard visuals.',
-    dateTime: 'Sep 20, 2026 at 11:00 AM',
-    deadline: 'Sep 22, 2026',
-    priority: 'Low',
-    category: 'Design',
-    completed: false,
-  },
-];
 
 const TaskContext = createContext<TaskContextValue | undefined>(undefined);
 
 export const TaskProvider = ({children}: React.PropsWithChildren) => {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addTask = (task: Task) => setTasks(current => [task, ...current]);
+  const refreshTasks = useCallback(async (): Promise<void> => {
+    setLoading(true);
+    setError(null);
 
-  const toggleTaskCompleted = (id: string) => {
-    setTasks(current =>
-      current.map(task =>
-        task.id === id ? {...task, completed: !task.completed} : task,
-      ),
-    );
+    try {
+      const loadedTasks = await getTasks();
+      setTasks(loadedTasks);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshTasks();
+  }, [refreshTasks]);
+
+  const addTask = async (task: TaskInput): Promise<Task | undefined> => {
+    setError(null);
+
+    try {
+      const createdTask = await createTask(task);
+      setTasks(current => [createdTask, ...current]);
+      return createdTask;
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError));
+      return undefined;
+    }
   };
 
-  const deleteTask = (id: string) => {
-    setTasks(current => current.filter(task => task.id !== id));
+  const toggleTaskCompleted = async (
+    id: string,
+  ): Promise<Task | undefined> => {
+    setError(null);
+    const task = tasks.find(currentTask => currentTask.id === id);
+
+    if (!task) {
+      setError('Task not found.');
+      return undefined;
+    }
+
+    try {
+      const updatedTask = await updateTask(id, {completed: !task.completed});
+      setTasks(current =>
+        current.map(currentTask =>
+          currentTask.id === id ? updatedTask : currentTask,
+        ),
+      );
+      return updatedTask;
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError));
+      return undefined;
+    }
+  };
+
+  const deleteTask = async (id: string): Promise<boolean> => {
+    setError(null);
+
+    try {
+      await deleteTaskRequest(id);
+      setTasks(current => current.filter(task => task.id !== id));
+      return true;
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError));
+      return false;
+    }
   };
 
   const getTaskById = (id: string) => tasks.find(task => task.id === id);
 
   return (
     <TaskContext.Provider
-      value={{tasks, addTask, toggleTaskCompleted, deleteTask, getTaskById}}>
+      value={{
+        tasks,
+        loading,
+        error,
+        refreshTasks,
+        addTask,
+        toggleTaskCompleted,
+        deleteTask,
+        getTaskById,
+      }}>
       {children}
     </TaskContext.Provider>
   );

@@ -29,14 +29,13 @@ const AddTaskScreen = ({navigation}: Props) => {
   const [priority, setPriority] = useState<TaskPriority>('Medium');
   const [category, setCategory] = useState('');
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!title.trim() || !dateTime.trim() || !deadline.trim()) {
       Alert.alert('Missing details', 'Please enter title, date/time and deadline.');
       return;
     }
 
-    addTask({
-      id: Date.now().toString(),
+    const createdTask = await addTask({
       title: title.trim(),
       description: description.trim(),
       dateTime: dateTime.trim(),
@@ -45,7 +44,13 @@ const AddTaskScreen = ({navigation}: Props) => {
       category: category.trim(),
       completed: false,
     });
-    navigation.navigate('Home');
+
+    if (createdTask) {
+      navigation.navigate('Home');
+      return;
+    }
+
+    Alert.alert('Unable to add task', 'Please try again.');
   };
 
   return (

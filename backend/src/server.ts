@@ -1,5 +1,5 @@
 import express from 'express';
-import {connectDatabase} from './config/db';
+import {connectDatabase} from './config/database';
 import {env} from './config/env';
 import {errorHandler} from './middleware/errorHandler';
 import taskRouter from './routes/taskRoutes';
@@ -17,14 +17,14 @@ app.get('/health', (_request, response) => {
 app.use(errorHandler);
 
 const startServer = async (): Promise<void> => {
-  app.listen(env.port, () => {
-    console.log(`Todo API listening on port ${env.port}`);
-  });
-
   try {
     await connectDatabase();
+    app.listen(env.port, () => {
+      console.log(`Todo API listening on port ${env.port}`);
+    });
   } catch (error) {
     console.error('MongoDB connection failed', error);
+    process.exit(1);
   }
 };
 

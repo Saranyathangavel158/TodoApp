@@ -15,13 +15,31 @@ import type {RootStackParamList} from '../navigation/AppNavigator';
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 const HomeScreen = ({navigation}: Props) => {
-  const {tasks} = useTaskContext();
+  const {tasks, loading, error, refreshTasks} = useTaskContext();
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(task => task.completed).length;
   const pendingTasks = totalTasks - completedTasks;
+  const emptyTitle = loading ? 'Loading tasks' : 'No tasks yet';
+  const emptyText = loading
+    ? 'Fetching your tasks from the server.'
+    : error ?? 'Add your first task to start organizing your day.';
+  const emptyActionLabel = loading ? 'Please Wait' : error ? 'Try Again' : 'Add Task';
 
   const handleTaskPress = (taskId: string) => {
     navigation.navigate('TaskDetails', {taskId});
+  };
+
+  const handleEmptyAction = () => {
+    if (loading) {
+      return;
+    }
+
+    if (error) {
+      void refreshTasks();
+      return;
+    }
+
+    navigation.navigate('AddTask');
   };
 
   return (
@@ -60,6 +78,8 @@ const HomeScreen = ({navigation}: Props) => {
         <FlatList
           data={tasks}
           keyExtractor={item => item.id}
+          refreshing={loading}
+          onRefresh={refreshTasks}
           renderItem={({item}) => (
             <TaskCard task={item} onPress={handleTaskPress} />
           )}
@@ -68,14 +88,13 @@ const HomeScreen = ({navigation}: Props) => {
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No tasks yet</Text>
-              <Text style={styles.emptyText}>
-                Add your first task to start organizing your day.
-              </Text>
+              <Text style={styles.emptyTitle}>{emptyTitle}</Text>
+              <Text style={styles.emptyText}>{emptyText}</Text>
               <TouchableOpacity
                 style={styles.emptyButton}
-                onPress={() => navigation.navigate('AddTask')}>
-                <Text style={styles.emptyButtonText}>Add Task</Text>
+                onPress={handleEmptyAction}
+                disabled={loading}>
+                <Text style={styles.emptyButtonText}>{emptyActionLabel}</Text>
               </TouchableOpacity>
             </View>
           }
