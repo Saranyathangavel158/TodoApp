@@ -1,4 +1,6 @@
 import React, {useState} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import {
   Alert,
   KeyboardAvoidingView,
@@ -9,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../navigation/AppNavigator';
 
@@ -19,7 +22,7 @@ const RegisterScreen = ({navigation}: Props) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please complete all fields.');
       return;
@@ -30,7 +33,36 @@ const RegisterScreen = ({navigation}: Props) => {
       return;
     }
 
-    Alert.alert('Register', 'Registration will be connected soon.');
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters.');
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem(
+        'registeredUser',
+        JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      );
+
+      Alert.alert(
+        'Registration Successful',
+        'Your account has been created. Please login to continue.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Login'),
+          },
+        ],
+      );
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'Unable to create account. Please try again.',
+      );
+    }
   };
 
   return (
@@ -38,10 +70,13 @@ const RegisterScreen = ({navigation}: Props) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.content}>
-        <Text style={styles.brand}>TaskFlow</Text>
+        <Text style={styles.brand}>MyToDo</Text>
+
         <Text style={styles.title}>Create account</Text>
 
-        <Text style={styles.subtitle}>Register to start organizing tasks.</Text>
+        <Text style={styles.subtitle}>
+          Register to start organizing tasks.
+        </Text>
 
         <TextInput
           style={styles.input}
@@ -72,14 +107,19 @@ const RegisterScreen = ({navigation}: Props) => {
           secureTextEntry
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleRegister}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleRegister}>
           <Text style={styles.buttonText}>Register</Text>
         </TouchableOpacity>
 
         <View style={styles.loginContainer}>
-          <Text style={styles.loginText}>Already have an account? </Text>
+          <Text style={styles.loginText}>
+            Already have an account?{' '}
+          </Text>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Login')}>
             <Text style={styles.loginLink}>Login</Text>
           </TouchableOpacity>
         </View>

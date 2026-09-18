@@ -1,4 +1,6 @@
 import React, {useState} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import {
   Alert,
   KeyboardAvoidingView,
@@ -9,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../navigation/AppNavigator';
 
@@ -18,13 +21,43 @@ const LoginScreen = ({navigation}: Props) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please enter email and password.');
       return;
     }
 
-    navigation.replace('Home');
+    try {
+      const storedUser = await AsyncStorage.getItem('registeredUser');
+
+      if (!storedUser) {
+        Alert.alert(
+          'Account Not Found',
+          'Please register an account first.',
+        );
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+
+      if (
+        email.trim().toLowerCase() !== user.email ||
+        password !== user.password
+      ) {
+        Alert.alert(
+          'Login Failed',
+          'Invalid email or password.',
+        );
+        return;
+      }
+
+      navigation.replace('Home');
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'Unable to login. Please try again.',
+      );
+    }
   };
 
   return (
@@ -32,10 +65,13 @@ const LoginScreen = ({navigation}: Props) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.content}>
-        <Text style={styles.brand}>TaskFlow</Text>
+        <Text style={styles.brand}>MyToDo</Text>
+
         <Text style={styles.title}>Welcome back</Text>
 
-        <Text style={styles.subtitle}>Log in to manage your tasks.</Text>
+        <Text style={styles.subtitle}>
+          Log in to manage your tasks.
+        </Text>
 
         <TextInput
           style={styles.input}
@@ -57,7 +93,9 @@ const LoginScreen = ({navigation}: Props) => {
           secureTextEntry
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleLogin}>
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
 
@@ -66,7 +104,8 @@ const LoginScreen = ({navigation}: Props) => {
             Don't have an account?{' '}
           </Text>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Register')}>
             <Text style={styles.registerLink}>Register</Text>
           </TouchableOpacity>
         </View>
