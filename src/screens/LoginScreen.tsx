@@ -51,8 +51,11 @@ const LoginScreen = ({navigation}: Props) => {
         return;
       }
 
+      // Save the login session.
+      await AsyncStorage.setItem('isLoggedIn', 'true');
+
       navigation.replace('Home');
-    } catch (error) {
+    } catch{
       Alert.alert(
         'Error',
         'Unable to login. Please try again.',

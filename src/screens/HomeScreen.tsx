@@ -1,5 +1,8 @@
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import {
+  Alert,
   FlatList,
   SafeAreaView,
   StyleSheet,
@@ -7,7 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+
 import TaskCard from '../components/TaskCard';
 import {useTaskContext} from '../context/TaskContext';
 import type {RootStackParamList} from '../navigation/AppNavigator';
@@ -16,14 +21,22 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 const HomeScreen = ({navigation}: Props) => {
   const {tasks, loading, error, refreshTasks} = useTaskContext();
+
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(task => task.completed).length;
   const pendingTasks = totalTasks - completedTasks;
+
   const emptyTitle = loading ? 'Loading tasks' : 'No tasks yet';
+
   const emptyText = loading
     ? 'Fetching your tasks from the server.'
     : error ?? 'Add your first task to start organizing your day.';
-  const emptyActionLabel = loading ? 'Please Wait' : error ? 'Try Again' : 'Add Task';
+
+  const emptyActionLabel = loading
+    ? 'Please Wait'
+    : error
+      ? 'Try Again'
+      : 'Add Task';
 
   const handleTaskPress = (taskId: string) => {
     navigation.navigate('TaskDetails', {taskId});
@@ -35,11 +48,42 @@ const HomeScreen = ({navigation}: Props) => {
     }
 
     if (error) {
-      void refreshTasks();
+      refreshTasks();
       return;
     }
 
     navigation.navigate('AddTask');
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Remove only the login session.
+              // The registered account remains saved.
+              await AsyncStorage.removeItem('isLoggedIn');
+
+              navigation.replace('Login');
+            } catch {
+              Alert.alert(
+                'Logout Failed',
+                'Unable to logout. Please try again.',
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -51,11 +95,19 @@ const HomeScreen = ({navigation}: Props) => {
             <Text style={styles.title}>My Tasks</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => navigation.navigate('AddTask')}>
-            <Text style={styles.addButtonText}>Add Task</Text>
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}>
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => navigation.navigate('AddTask')}>
+              <Text style={styles.addButtonText}>Add Task</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.statsRow}>
@@ -89,12 +141,16 @@ const HomeScreen = ({navigation}: Props) => {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>{emptyTitle}</Text>
+
               <Text style={styles.emptyText}>{emptyText}</Text>
+
               <TouchableOpacity
                 style={styles.emptyButton}
                 onPress={handleEmptyAction}
                 disabled={loading}>
-                <Text style={styles.emptyButtonText}>{emptyActionLabel}</Text>
+                <Text style={styles.emptyButtonText}>
+                  {emptyActionLabel}
+                </Text>
               </TouchableOpacity>
             </View>
           }
@@ -136,6 +192,29 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 32,
     fontWeight: '800',
+  },
+
+  headerButtons: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+
+  logoutButton: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+
+  logoutButtonText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '700',
   },
 
   addButton: {
